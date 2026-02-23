@@ -12,7 +12,9 @@ import {
 import Loader from '../components/Loader.jsx'
 import ErrorState from '../components/ErrorState.jsx'
 import StatCard from '../components/StatCard.jsx'
+import ImportedTable from '../components/ImportedTable.jsx'
 import { fetchRegistrations } from '../api/analyticsApi.js'
+import { fetchImportedParticipants } from '../api/importApi.js'
 import {
   aggregateByDate,
   applyMinCount,
@@ -20,9 +22,11 @@ import {
   calculateStats,
 } from '../utils/aggregate.js'
 import { debounce } from '../utils/debounce.js'
+import { readJSON, writeJSON } from '../utils/storage.js'
 import { setDocumentTitle } from '../utils/title.js'
 
 const RANGE_OPTIONS = [7, 14, 30]
+const IMPORT_KEY = 'importedParticipants'
 
 function Analytics() {
   const [registrations, setRegistrations] = useState([])
@@ -32,9 +36,16 @@ function Analytics() {
   const [status, setStatus] = useState('loading')
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
+  const [imported, setImported] = useState([])
+  const [importStatus, setImportStatus] = useState('idle')
+  const [importError, setImportError] = useState('')
 
   useEffect(() => {
     setDocumentTitle('Analytics')
+  }, [])
+
+  useEffect(() => {
+    setImported(readJSON(IMPORT_KEY, []))
   }, [])
 
   useEffect(() => {
@@ -69,10 +80,22 @@ function Analytics() {
 
   const rangeData = useMemo(() => applyRange(aggregated, range), [aggregated, range])
   const filteredData = useMemo(
-    () => applyMinCount(rangeData, minCount),
+    () => applyMinCount(rangeData, Number(minCount) || 0),
     [rangeData, minCount],
   )
   const stats = useMemo(() => calculateStats(filteredData), [filteredData])
+
+  const sortedImported = useMemo(() => {
+    return [...imported].sort(
+      (a, b) => new Date(b.importedAt) - new Date(a.importedAt),
+    )
+  }, [imported])
+
+  const visibleImported = sortedImported.slice(0, 10)
+
+  const handleRangeChange = (event) => {
+    setRange(Number(event.target.value))
+  }
 
   const debouncedMinUpdate = useMemo(
     () =>
@@ -85,10 +108,6 @@ function Analytics() {
 
   useEffect(() => () => debouncedMinUpdate.cancel(), [debouncedMinUpdate])
 
-  const handleRangeChange = (event) => {
-    setRange(Number(event.target.value))
-  }
-
   const handleMinCountChange = (event) => {
     const value = Number(event.target.value)
     setMinCountInput(value)
@@ -97,6 +116,30 @@ function Analytics() {
 
   const handleRetry = () => {
     setReloadKey((key) => key + 1)
+  }
+
+  const handleImport = async () => {
+    setImportStatus('loading')
+    setImportError('')
+    try {
+      const newcomers = await fetchImportedParticipants(10)
+      setImported((prev) => {
+        const combined = [...newcomers, ...prev]
+        writeJSON(IMPORT_KEY, combined)
+        return combined
+      })
+      setImportStatus('success')
+    } catch (err) {
+      setImportStatus('error')
+      setImportError(err.message)
+    }
+  }
+
+  const handleClearImported = () => {
+    setImported([])
+    writeJSON(IMPORT_KEY, [])
+    setImportStatus('idle')
+    setImportError('')
   }
 
   const averageValue = stats.average ? stats.average.toFixed(1) : '0.0'
@@ -114,6 +157,14 @@ function Analytics() {
           <h1>Analytics</h1>
           <p className="muted">Кількість реєстрацій за останні 30 днів</p>
         </div>
+        <button
+          className="btn"
+          type="button"
+          onClick={handleImport}
+          disabled={importStatus === 'loading'}
+        >
+          {importStatus === 'loading' ? 'Importing...' : 'Import new participants'}
+        </button>
       </div>
 
       <div className="filters-row">
@@ -136,6 +187,14 @@ function Analytics() {
             onChange={handleMinCountChange}
           />
         </label>
+        <div className="import-feedback">
+          {importStatus === 'success' ? (
+            <span className="badge success">Imported!</span>
+          ) : null}
+          {importStatus === 'error' ? (
+            <span className="badge error">{importError}</span>
+          ) : null}
+        </div>
       </div>
 
       {status === 'loading' ? <Loader label="Loading analytics" /> : null}
@@ -185,6 +244,12 @@ function Analytics() {
           </div>
         </>
       ) : null}
+
+      <ImportedTable
+        participants={visibleImported}
+        total={sortedImported.length}
+        onClear={handleClearImported}
+      />
     </section>
   )
 }
