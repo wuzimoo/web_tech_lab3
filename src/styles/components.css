@@ -1,0 +1,80 @@
+.event-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.event-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #fff;
+}
+
+.event-id {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-bottom: 0;
+}
+
+.event-body {
+  color: #475569;
+  flex: 1;
+}
+
+.event-card-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.participants-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.participant-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  background: #f8fafc;
+}
+
+.stat-card {
+  padding: 1rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #475569;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.stat-hint {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.imported-block .muted {
+  margin-bottom: 0.25rem;
+}
+
+.sentinel {
+  width: 100%;
+  height: 1px;
+}
